@@ -1,0 +1,64 @@
+﻿<!DOCTYPE html>
+
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="utf-8" />
+    <title>string testing</title>
+</head>
+<body>
+    <script type="text/javascript">
+        s = "little car;big car;";
+        document.write(s);
+        partition = s.split(";");
+        document.write("<br>");
+        document.write(partition[0]);
+        document.write("<br>");
+        document.write(partition[1])
+        document.write("<br>");
+
+        s = Array(100).fill(0)
+        document.write(s[0])
+
+
+        var update_position = self.setInterval("test_files()", 500);
+        function test_files() {
+            //var cnzz_s_tag = document.createElement('script');
+
+            //cnzz_s_tag.type = 'text/javascript';
+            //cnzz_s_tag.async = true;
+            //cnzz_s_tag.charset = 'utf-8';
+            //cnzz_s_tag.src = 'rec\\site_0.json ? callback = Inis';
+            //var root_s = document.getElementsByTagName('script')[0];
+            //root_s.parentNode.insertBefore(cnzz_s_tag, root_s);                     //从文件中加载设备位置
+            document.write("<br>");
+            document.write('not success')
+
+            var cnzz_s_tag = document.createElement('script');
+            cnzz_s_tag.type = 'text/javascript';
+            cnzz_s_tag.async = true;
+            cnzz_s_tag.charset = 'utf-8';
+            cnzz_s_tag.src = 'rec\\rec' + 0 + '.json ? callback = Update_position';
+            var root_s = document.getElementsByTagName('script')[0];
+            root_s.parentNode.insertBefore(cnzz_s_tag, root_s);                     //从文件中加载设备位置
+            //不明白为什么进不去
+        }
+
+        function Update_position(content) {
+            document.write("<br>");
+            document.write('success')
+            document.write(content.Lng)
+            document.write("<br>");
+            document.write(content.Lat)
+            document.write("<br>");
+            document.write(content.Dat + ' ' + content.Time)
+        }
+
+        test_files()
+        document.write("<br>");
+        document.write('here')
+        document.write(123.331)        
+
+        //document.write(parseFloat(partition[0]) + 20);
+    </script>
+</body>
+</html>

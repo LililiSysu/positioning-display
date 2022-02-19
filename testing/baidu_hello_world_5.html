@@ -1,0 +1,323 @@
+﻿<!DOCTYPE html>
+
+<html>
+<head>
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Hello, World</title>
+    <style type="text/css">
+        html {
+            height: 100%
+        }
+
+        body {
+            height: 100%;
+            margin: 0px;
+            padding: 0px
+        }
+
+        #container {
+            height: 96.5%
+        }
+
+        #bottom_line {
+            height: 3.5%
+        }
+    </style>
+
+    <!-- 百度地图3.0 在线API Begin -->
+    <script type="text/javascript" src="https://api.map.baidu.com/api?v=2.0&ak=t8GPZDPZwKbiRHcjFasQ7TbIkNb7ZO9D"></script>
+
+</head>
+<body>
+    <div id="bottom_line">
+
+        经度： <input id="longitude" type="text" style="width:100px; margin-right:10px;" onchange="theLocation()" />
+        纬度： <input id="latitude" type="text" style="width:100px; margin-right:10px;" onchange="theLocation()" />
+        <input type="button" value="查询" onclick="theLocation()" />
+
+        设备编号：<input id="dev_num" type="text" style="width:20px; margin-right:10px;" onchange="find_device()">
+        <input type="button" value="查询" onclick="find_device()" />
+
+    </div>
+
+    <div id="container">
+        <script type="text/javascript">
+
+
+            /*------------------------------------函数定义段------------------------------------*/
+
+            //地图标注设置函数
+            class device {
+                //constructor
+                constructor(device_name, device_num, map, lng, lat, update_time) {
+                    this.device_name = device_name;
+                    this.device_num = device_num;
+                    this.map = map;
+                    this.lng = lng;                                       //经度
+                    this.lat = lat;                                       //纬度
+                    this.update_time = update_time;                       //更新时间
+                    this.point = new BMap.Point(this.lng, this.lat);      //创建点坐标
+                    this.marker = new BMap.Marker(this.point);
+                    this.label = new BMap.Label("(设备" + this.device_num + ") " + device_name  + ' [' + this.update_time.substr(this.update_time.indexOf(" ") + 1,8) + ']', { offset: new BMap.Size(20, -10) });
+                    this.circle = new BMap.Circle(this.point, 65, { strokeColor: "blue", strokeWeight: 1, fillOpacity: 0, strokeOpacity: 0.4 });
+
+                    this.mark();                                          //自动添加标记
+                }
+
+                mark() {
+                    this.map.addOverlay(this.marker);                     //添加 marker 标记
+                    this.marker.setLabel(this.label);                     //添加 label 注释
+                    this.map.addOverlay(this.circle);                     //添加 circle 圆
+
+                    var opts = {
+                        width: 100,                                          // 信息窗口宽度
+                        height: 120,                                         // 信息窗口高度
+                        title: "（设备：" + this.device_num + "）" + this.device_name,                             // 信息窗口标题
+                        enableMessage: true,                                 // 设置允许信息窗发送短息
+                        message: "_"
+                    }
+                    var infoWindow = new BMap.InfoWindow("更新时间：" + this.update_time + "<br>经度：" + this.lng + ",<br>纬度：" + this.lat, opts);    // 创建信息窗口对象
+                    this.marker.addEventListener("click", function () {
+                        map.openInfoWindow(infoWindow, this.point);                                 // 开启信息窗口
+                    });     //设置点击产生信息窗口
+
+                }       //标记点
+
+                unmark() {
+                    this.map.removeOverlay(this.marker);
+                    this.map.removeOverlay(this.circle);
+                }       //移除标记
+
+                update() {
+                    this.point = new BMap.Point(this.lng, this.lat);
+                    this.marker = new BMap.Marker(this.point);
+                    this.label = new BMap.Label("(设备" + this.device_num + ") " + this.device_name + ' [' + this.update_time.substr(this.update_time.indexOf(" ") + 1, 8) + ']', { offset: new BMap.Size(20, -10) });
+                    this.circle = new BMap.Circle(this.point, 65, { strokeColor: "blue", strokeWeight: 1, fillOpacity: 0, strokeOpacity: 0.4 });
+                }
+
+                move_north() {
+                    this.unmark();
+                    this.lat = this.lat + 0.01;                             //纬度上升0.01
+                    this.update();                                          //更新点坐标
+                    this.mark();
+                }
+
+                move_to(lng, lat, update_time) {
+                    this.unmark();
+                    this.lng = lng;
+                    this.lat = lat;
+                    this.update_time = update_time;
+                    this.update();
+                    this.mark();
+                }
+
+                be_center() {
+                    this.map.panTo(this.point);
+                }
+
+            }
+
+            //由两点的经纬度计算距离
+            var EARTH_RADIUS = 6378137.0;    //单位M
+            var PI = Math.PI;
+            function getRad(d) {
+                return d * PI / 180.0;
+            }
+            function getFlatternDistance(lat1, lng1, lat2, lng2) {
+                var f = getRad((lat1 + lat2) / 2);
+                var g = getRad((lat1 - lat2) / 2);
+                var l = getRad((lng1 - lng2) / 2);
+
+                var sg = Math.sin(g);
+                var sl = Math.sin(l);
+                var sf = Math.sin(f);
+
+                var s, c, w, r, d, h1, h2;
+                var a = EARTH_RADIUS;
+                var fl = 1 / 298.257;
+
+                sg = sg * sg;
+                sl = sl * sl;
+                sf = sf * sf;
+
+                s = sg * (1 - sl) + (1 - sf) * sl;
+                c = (1 - sg) * (1 - sl) + sf * sl;
+
+                w = Math.atan(Math.sqrt(s / c));
+                r = Math.sqrt(s * c) / w;
+                d = 2 * w * a;
+                h1 = (3 * r - 1) / 2 / c;
+                h2 = (3 * r + 1) / 2 / s;
+
+                return parseInt(d * (1 + fl * (h1 * sf * (1 - sg) - h2 * (1 - sf) * sg)));
+            }
+
+
+            /*------------------------------------创建地图段------------------------------------*/
+
+            var map = new BMap.Map("container");        //创建地图实例
+            map.enableScrollWheelZoom(true);            //开启鼠标滚轮缩放
+            map.disableInertialDragging();              //禁用惯性拖拽
+            map.enableKeyboard();                       //开启键盘控制
+            map.setMapStyle({ style: "normal" });       //设置地图风格。其他可选风格：normal（默认），googlelite，dark，midnight
+            map.centerAndZoom(new BMap.Point(116.404, 39.915), 18);     //设置初始位置为天安门
+            map.setCurrentCity("北京");                                 //设置地图显示的城市 此项是必须设置的
+            var center_dev;                                             //中心设备的编号
+
+            //文件的输入，以文件内容设置坐标点
+
+            //确定用户
+            var username
+            document.write("<script type='text/javascript' src='rec\\on_use.json?callback=Load_user'><" + "/script>");
+            function Load_user(content) {
+                username = content.username
+            }
+
+            var dev_N = 0;
+            var device_Name = [];                       //创建空的设备列表
+            setTimeout(function () {
+                var cnzz_s_tag = document.createElement('script');
+                cnzz_s_tag.type = 'text/javascript';
+                cnzz_s_tag.async = true;
+                cnzz_s_tag.charset = 'utf-8';
+                cnzz_s_tag.src = 'rec\\' + username + '\\device_name.json ? callback=Name';
+                var root_s = document.getElementsByTagName('script')[0];
+                root_s.parentNode.insertBefore(cnzz_s_tag, root_s);                     //从文件中加载设备位置
+            }, 100);
+            function Name(content) {
+                dev_N = content.device_Num;
+                device_Name = content.devices.split(";");
+            }
+
+            //打开文件，初始化中心设备
+            var dev = [];                       //创建空的设备列表，先处理中心设备的情况
+            setTimeout(function () {
+                var cnzz_s_tag = document.createElement('script');
+                cnzz_s_tag.type = 'text/javascript';
+                cnzz_s_tag.async = true;
+                cnzz_s_tag.charset = 'utf-8';
+                cnzz_s_tag.src = 'rec\\' + username + '\\' + device_Name[0] + '\\site_0.json ? callback = Ini_c';
+                var root_s = document.getElementsByTagName('script')[0];
+                root_s.parentNode.insertBefore(cnzz_s_tag, root_s);                     //从文件中加载设备位置
+            }, 200);
+            function Ini_c(content) {
+                dev[0] = new device(device_Name[0], 1, map, content.Lng, content.Lat, content.Dat + ' ' + content.Time);    //添加设备
+                center_dev = 0; 
+                map.centerAndZoom(dev[center_dev].point, 13);                                                                        //初始化地图，设置设备1为中心点坐标，设置地图级别
+            }
+
+
+            //控件添加
+            map.addControl(new BMap.NavigationControl());
+            map.addControl(new BMap.ScaleControl());
+            map.addControl(new BMap.OverviewMapControl());
+            map.addControl(new BMap.MapTypeControl());
+
+
+            //添加城市切换控件
+            map.addControl(new BMap.CityListControl({
+                anchor: BMAP_ANCHOR_TOP_LEFT,
+                offset: new BMap.Size(100, 10)
+            }));
+
+            // 用经纬度设置地图中心点
+            var new_point;
+            var marker_setpos;
+            function theLocation() {
+                if (document.getElementById("longitude").value != "" && document.getElementById("latitude").value != "") {
+                    map.removeOverlay(marker_setpos);
+                    new_point = new BMap.Point(document.getElementById("longitude").value, document.getElementById("latitude").value);
+                    marker_setpos = new BMap.Marker(new_point);  // 创建标注
+                    map.addOverlay(marker_setpos);              // 将标注添加到地图中
+                    map.panTo(new_point);
+                }
+            }
+
+            //寻找坐标
+            function find_device() {
+                center_dev = document.getElementById("dev_num").value;
+                map.panTo(dev[center_dev - 1].point);
+            }
+
+            //等待设备文件读完
+
+
+            /* -------------------------初始化非中心设备---------------------------- */
+            var dev_Turn;
+            var is_Initialized;
+            setTimeout(function () {
+                is_Initialized = Array(dev_N).fill(false);                                  //开始时，所有设备未初始化
+                is_Initialized[0] = true;
+            }, 300);
+            setTimeout(function () {
+                var ini_dev = self.setInterval("Ini_dev()", 500);                               //隔0.5s，定时初始化位置
+            }, 400);
+            function Ini_dev() {
+                for (i = 1; i < dev_N; i++) {
+                    if (is_Initialized[i]) {
+                        continue
+                    }
+
+                    dev_Turn = i;                                                           //设备号，存于全局变量
+                    var cnzz_s_tag = document.createElement('script');
+                    cnzz_s_tag.type = 'text/javascript';
+                    cnzz_s_tag.async = true;
+                    cnzz_s_tag.charset = 'utf-8';
+                    cnzz_s_tag.src = 'rec\\' + username + '\\'+ device_Name[i] + '\\site_0.json ? callback = Ini';
+                    var root_s = document.getElementsByTagName('script')[0];
+                    root_s.parentNode.insertBefore(cnzz_s_tag, root_s);                     //从文件中加载设备位置
+                }
+                
+            }
+
+            function Ini(content) {
+                dev[dev_Turn] = new device(device_Name[dev_Turn], dev_Turn + 1, map, content.Lng, content.Lat, content.Dat + ' ' + content.Time);    //添加非中心设备
+                is_Initialized[dev_Turn] = true;                                           //初始化之后重置flag
+            }
+
+            /* ------------------------------------------------------------ */
+
+            /* -------------------------实时更新坐标---------------------------- */
+            var dev_Turn2;
+            var file_num
+            setTimeout(function () {
+                file_num = Array(dev_N).fill(1);
+            }, 300);
+            setTimeout(function () {
+                var update_position = self.setInterval("Update_dev(file_num)", 500);            //隔0.5s，定时更新位置
+            }, 400);
+            function Update_dev(file_num) {
+                for (i = 0; i < dev_N; i++) {
+                    if (!is_Initialized[i]) {
+                        dev_Turn2 = 0;                                                           //设备号，存于全局变量
+                        continue;
+                    }
+                    else {
+                        dev_Turn2 = i;                                                           //设备号，存于全局变量
+                    }
+                    
+                    var cnzz_s_tag = document.createElement('script');
+                    cnzz_s_tag.type = 'text/javascript';
+                    cnzz_s_tag.async = true;
+                    cnzz_s_tag.charset = 'utf-8';
+                    cnzz_s_tag.src = 'rec\\' + username + '\\'+ device_Name[i] + '\\site_' + file_num[i] + '.json ? callback = Up';
+                    var root_s = document.getElementsByTagName('script')[0];
+                    root_s.parentNode.insertBefore(cnzz_s_tag, root_s);                     //从文件中加载设备位置
+                }
+
+            }
+
+            function Up(content) {
+                //回调函数名称(Update_position)，需要与 src 中一致，而且要与文件地址中名一致。jsonp格式 名称({})
+                //不然无法获取到对应的文件
+                dev[dev_Turn2].move_to(content.Lng, content.Lat, content.Dat + ' ' + content.Time);            //更新设备坐标
+                file_num[dev_Turn2] = file_num[dev_Turn2] + 1;                                                      //扫描下一个文件
+            }
+
+            /* ------------------------------------------------------------ */
+
+        </script>
+    </div>
+</body>
+</html>
